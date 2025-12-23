@@ -1,0 +1,39 @@
+=============================
+/\/\/\/Halachik Finder\/\/\/\
+=============================
+
+Java HTTP API that calculates halachic zmanim using the KosherJava Zmanim library.
+
+Endpoint
+  GET /tzeis  (this is when sun is 8.5° below horizon, NOT Rabbeinu Tam (72 min))
+  GET /sunset
+  GET /sunrise
+  GET /shema-mga  Latest Shema – Magen Avraham
+  GET /shema-gra  Latest Shema – Gra
+  GET /shema-bht  Latest Shema – Baal HaTanya
+  GET /shacharis-gra  Latest Shacharis – Gra
+  GET /shacharis-bht  Latest Shacharis – Baal HaTanya
+
+Parameters
+- lat  (latitude)
+- lon  (longitude)
+- date (YYYY-MM-DD)
+
+ Example
+http://SERVER_IP:8080/sunset?lat=31.78&lon=35.22&date=2025-12-16
+                   ____/       \___     |          \__
+                  |                \    /             |
+One of the following: tzeis,        \  /         Date in form: YYYY-MM-DD
+sunset, sunrise, shema-mga,          \/
+shema-gra, shema-bht,                 |
+shacharis-gra, or shacharis-bht.      |
+                                      |
+Latitude and Longitude, rounded to 2 decimal places. (rounding to 3 decimal
+places works but it shifts zmanim by only ~0.2–0.5 seconds)
+
+ 
+ Response
+{
+  "zman": "tzeis",
+  "time": "17:01:32 UTC"
+}
