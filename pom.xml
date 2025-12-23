@@ -36,6 +36,7 @@
                 </configuration>
             </plugin>
 
+            <!-- shade plugin to create executable JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
