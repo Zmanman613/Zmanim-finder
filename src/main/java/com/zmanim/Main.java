@@ -28,28 +28,27 @@ public class Main {
             try {
                 Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
 
+                // Validate required parameters
+                if (!params.containsKey("lat") || !params.containsKey("lon") || !params.containsKey("date")) {
+                    sendError(exchange, 400, "lat, lon, and date parameters are required");
+                    return;
+                }
+
                 double lat = Double.parseDouble(params.get("lat"));
                 double lon = Double.parseDouble(params.get("lon"));
                 double elevation = params.containsKey("elevation")
                         ? Double.parseDouble(params.get("elevation"))
                         : 0.0;
-                double tzeisAngle = params.containsKey("tzeisAngle")
-                        ? Double.parseDouble(params.get("tzeisAngle"))
-                        : 8.5;
 
                 String dateStr = params.get("date");
 
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 Date date = sdf.parse(dateStr);
 
-                TimeZone tz = TimeZone.getTimeZone("UTC"); // safe default
+                // For now, use UTC (can enhance to detect timezone from location later)
+                TimeZone tz = TimeZone.getTimeZone("UTC");
 
-                GeoLocation location = new GeoLocation(
-                        "UserLocation",
-                        lat,
-                        lon,
-                        tz
-                );
+                GeoLocation location = new GeoLocation("UserLocation", lat, lon, tz);
                 location.setElevation(elevation);
 
                 ComplexZmanimCalendar calendar = new ComplexZmanimCalendar(location);
@@ -72,7 +71,6 @@ public class Main {
                 result.put("longitude", String.valueOf(lon));
                 result.put("elevation", String.valueOf(elevation));
                 result.put("date", dateStr);
-                result.put("tzeisAngle", String.valueOf(tzeisAngle));
                 result.put("timezone", tz.getID());
 
                 String json = toJson(result);
@@ -85,8 +83,19 @@ public class Main {
                 os.close();
 
             } catch (Exception e) {
-                e.printStackTrace();
+                sendError(exchange, 400, e.getMessage());
             }
+        }
+
+        private void sendError(HttpExchange exchange, int code, String message) {
+            try {
+                String error = "{\"error\":\"" + message + "\"}";
+                exchange.getResponseHeaders().add("Content-Type", "application/json");
+                exchange.sendResponseHeaders(code, error.getBytes().length);
+                OutputStream os = exchange.getResponseBody();
+                os.write(error.getBytes());
+                os.close();
+            } catch (Exception ignored) {}
         }
 
         private Map<String, String> queryToMap(String query) {
@@ -114,5 +123,3 @@ public class Main {
         }
     }
 }
-
-
