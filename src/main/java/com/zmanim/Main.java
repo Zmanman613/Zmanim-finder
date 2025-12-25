@@ -61,7 +61,7 @@ public class Main {
                 Map<String, String> result = new HashMap<>();
                 result.put("sunrise", out.format(calendar.getSunrise()));
                 result.put("sunset", out.format(calendar.getSunset()));
-                result.put("tzeis", out.format(calendar.getTzaisByDegrees(tzeisAngle)));
+                result.put("tzeis", out.format(calendar.getTzais()));
                 result.put("shema_mga", out.format(calendar.getSofZmanShmaMGA()));
                 result.put("shema_gra", out.format(calendar.getSofZmanShmaGRA()));
                 result.put("shema_bht", out.format(calendar.getSofZmanShmaBaalHatanya()));
@@ -114,4 +114,5 @@ public class Main {
         }
     }
 }
+
 
