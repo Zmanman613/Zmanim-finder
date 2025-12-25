@@ -15,7 +15,7 @@ import java.util.TimeZone;
 public class Main {
 
     public static void main(String[] args) throws Exception {
-        HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress("0.0.0.0", 8080), 0);
         server.createContext("/zmanim", new ZmanimHandler());
         server.start();
         System.out.println("Zmanim API running on port 8080");
@@ -123,3 +123,4 @@ public class Main {
         }
     }
 }
+
