@@ -1,7 +1,8 @@
+package com.zmanim;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
-import com.kosherjava.zmanim.ZmanimCalendar;
+import com.kosherjava.zmanim.ComplexZmanimCalendar;
 import com.kosherjava.zmanim.util.GeoLocation;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
@@ -9,86 +10,107 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TimeZone;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
-
         server.createContext("/zmanim", new ZmanimHandler());
-
-        server.setExecutor(null);
         server.start();
-        System.out.println("Server started at http://localhost:8080");
+        System.out.println("Zmanim API running on port 8080");
     }
 
     static class ZmanimHandler implements HttpHandler {
+
         @Override
         public void handle(HttpExchange exchange) {
             try {
-                String query = exchange.getRequestURI().getQuery();
-                Map<String, String> params = queryToMap(query);
+                Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
 
                 double lat = Double.parseDouble(params.get("lat"));
                 double lon = Double.parseDouble(params.get("lon"));
+                double elevation = params.containsKey("elevation")
+                        ? Double.parseDouble(params.get("elevation"))
+                        : 0.0;
+                double tzeisAngle = params.containsKey("tzeisAngle")
+                        ? Double.parseDouble(params.get("tzeisAngle"))
+                        : 8.5;
+
                 String dateStr = params.get("date");
 
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 Date date = sdf.parse(dateStr);
 
-                GeoLocation location = new GeoLocation("UserLocation", lat, lon, 0);
-                ZmanimCalendar calendar = new ZmanimCalendar(location);
-                calendar.setDate(date);
+                TimeZone tz = TimeZone.getTimeZone("UTC"); // safe default
 
-                SimpleDateFormat outputFormat = new SimpleDateFormat("HH:mm:ss");
+                GeoLocation location = new GeoLocation(
+                        "UserLocation",
+                        lat,
+                        lon,
+                        tz
+                );
+                location.setElevation(elevation);
+
+                ComplexZmanimCalendar calendar = new ComplexZmanimCalendar(location);
+                calendar.getCalendar().setTime(date);
+
+                SimpleDateFormat out = new SimpleDateFormat("HH:mm:ss");
+                out.setTimeZone(tz);
 
                 Map<String, String> result = new HashMap<>();
-                result.put("sunrise", outputFormat.format(calendar.getSunrise()));
-                result.put("sunset", outputFormat.format(calendar.getSunset()));
-                result.put("tzeis", outputFormat.format(calendar.getTzais())); // 8.5°
-                result.put("shema_mga", outputFormat.format(calendar.getSofZmanShmaMGA()));
-                result.put("shema_gra", outputFormat.format(calendar.getSofZmanShmaGRA()));
-                result.put("shema_bht", outputFormat.format(calendar.getSofZmanShmaBaalHatanya()));
-                result.put("shacharis_gra", outputFormat.format(calendar.getSofZmanTfilaGRA()));
-                result.put("shacharis_bht", outputFormat.format(calendar.getSofZmanTfilaBaalHatanya()));
+                result.put("sunrise", out.format(calendar.getSunrise()));
+                result.put("sunset", out.format(calendar.getSunset()));
+                result.put("tzeis", out.format(calendar.getTzais(tzeisAngle)));
+                result.put("shema_mga", out.format(calendar.getSofZmanShmaMGA()));
+                result.put("shema_gra", out.format(calendar.getSofZmanShmaGRA()));
+                result.put("shema_bht", out.format(calendar.getSofZmanShmaBaalHatanya()));
+                result.put("shacharis_gra", out.format(calendar.getSofZmanTfilaGRA()));
+                result.put("shacharis_bht", out.format(calendar.getSofZmanTfilaBaalHatanya()));
 
-                String jsonResponse = mapToJson(result);
+                result.put("latitude", String.valueOf(lat));
+                result.put("longitude", String.valueOf(lon));
+                result.put("elevation", String.valueOf(elevation));
+                result.put("date", dateStr);
+                result.put("tzeisAngle", String.valueOf(tzeisAngle));
+                result.put("timezone", tz.getID());
+
+                String json = toJson(result);
 
                 exchange.getResponseHeaders().add("Content-Type", "application/json");
-                exchange.sendResponseHeaders(200, jsonResponse.getBytes().length);
+                exchange.sendResponseHeaders(200, json.getBytes().length);
+
                 OutputStream os = exchange.getResponseBody();
-                os.write(jsonResponse.getBytes());
+                os.write(json.getBytes());
                 os.close();
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
 
         private Map<String, String> queryToMap(String query) {
-            Map<String, String> result = new HashMap<>();
-            if(query == null) return result;
+            Map<String, String> map = new HashMap<>();
+            if (query == null) return map;
             for (String param : query.split("&")) {
                 String[] pair = param.split("=");
-                if (pair.length > 1) {
-                    result.put(pair[0], pair[1]);
+                if (pair.length == 2) {
+                    map.put(pair[0], pair[1]);
                 }
             }
-            return result;
+            return map;
         }
 
-        private String mapToJson(Map<String, String> map) {
-            StringBuilder sb = new StringBuilder();
-            sb.append("{");
+        private String toJson(Map<String, String> map) {
+            StringBuilder sb = new StringBuilder("{");
             int i = 0;
-            for (Map.Entry<String, String> entry : map.entrySet()) {
-                sb.append("\"").append(entry.getKey()).append("\":")
-                  .append("\"").append(entry.getValue()).append("\"");
-                if (i < map.size() - 1) sb.append(",");
-                i++;
+            for (var e : map.entrySet()) {
+                sb.append("\"").append(e.getKey()).append("\":\"")
+                  .append(e.getValue()).append("\"");
+                if (++i < map.size()) sb.append(",");
             }
             sb.append("}");
             return sb.toString();
         }
     }
 }
-
