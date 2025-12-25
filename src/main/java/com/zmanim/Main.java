@@ -1,8 +1,8 @@
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
-import net.sourceforge.zmanim.ZmanimCalendar;
-import net.sourceforge.zmanim.util.GeoLocation;
+import com.kosherjava.zmanim.ZmanimCalendar;
+import com.kosherjava.zmanim.util.GeoLocation;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.text.SimpleDateFormat;
@@ -91,3 +91,4 @@ public class Main {
         }
     }
 }
+
