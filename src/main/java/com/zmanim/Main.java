@@ -28,7 +28,6 @@ public class Main {
             try {
                 Map<String, String> params = queryToMap(exchange.getRequestURI().getQuery());
 
-                // Validate required parameters
                 if (!params.containsKey("lat") || !params.containsKey("lon") || !params.containsKey("date")) {
                     sendError(exchange, 400, "lat, lon, and date parameters are required");
                     return;
@@ -45,7 +44,6 @@ public class Main {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
                 Date date = sdf.parse(dateStr);
 
-                // For now, use UTC (can enhance to detect timezone from location later)
                 TimeZone tz = TimeZone.getTimeZone("UTC");
 
                 GeoLocation location = new GeoLocation("UserLocation", lat, lon, tz);
@@ -71,7 +69,6 @@ public class Main {
                 result.put("longitude", String.valueOf(lon));
                 result.put("elevation", String.valueOf(elevation));
                 result.put("date", dateStr);
-                result.put("timezone", tz.getID());
 
                 String json = toJson(result);
 
@@ -123,4 +120,5 @@ public class Main {
         }
     }
 }
+
 
