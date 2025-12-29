@@ -30,7 +30,6 @@ public class Main {
         public void handle(HttpExchange exchange) {
             try {
                 Map<String, String> p = queryToMap(exchange.getRequestURI().getQuery());
-
                 require(p, "lat", "lon", "date");
 
                 double lat = Double.parseDouble(p.get("lat"));
@@ -38,7 +37,6 @@ public class Main {
                 double elevation = p.containsKey("elevation") ? Double.parseDouble(p.get("elevation")) : 0;
 
                 TimeZone tz = TimeZone.getTimeZone("UTC");
-
                 Date date = new SimpleDateFormat("yyyy-MM-dd").parse(p.get("date"));
 
                 GeoLocation loc = new GeoLocation("User", lat, lon, tz);
@@ -54,12 +52,8 @@ public class Main {
                 r.put("sunrise", out.format(cal.getSunrise()));
                 r.put("sunset", out.format(cal.getSunset()));
                 r.put("tzeis", out.format(cal.getTzais()));
-                r.put("shema_mga", out.format(cal.getSofZmanShmaMGA()));
-                r.put("shema_gra", out.format(cal.getSofZmanShmaGRA()));
-                r.put("shacharis_gra", out.format(cal.getSofZmanTfilaGRA()));
 
                 respond(exchange, r);
-
             } catch (Exception e) {
                 error(exchange, e.getMessage());
             }
@@ -67,7 +61,7 @@ public class Main {
     }
 
     // ===================== /halachik =====================
-    static class HalachikHandler {
+    static class HalachikHandler implements HttpHandler {
 
         static final String[] REQUIRED_BOOLEANS = {
                 "tachanunRecitedEndOfTishrei",
@@ -80,15 +74,13 @@ public class Main {
                 "tachanunRecitedWeekOfHod",
                 "tachanunRecitedWeekOfPurim",
                 "tachanunRecitedFridays",
-                "tachanunRecitedSundays",
-                "mizmorLesodaRecitedErevYomKippurAndPesach"
+                "tachanunRecitedSundays"
         };
 
         @Override
         public void handle(HttpExchange exchange) {
             try {
                 Map<String, String> p = queryToMap(exchange.getRequestURI().getQuery());
-
                 require(p, "lat", "lon", "date", "time");
                 for (String b : REQUIRED_BOOLEANS) require(p, b);
 
@@ -97,9 +89,9 @@ public class Main {
                 double elevation = p.containsKey("elevation") ? Double.parseDouble(p.get("elevation")) : 0;
 
                 TimeZone tz = TimeZone.getTimeZone("UTC");
-
                 SimpleDateFormat dt = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
                 dt.setTimeZone(tz);
+
                 Date userDateTime = dt.parse(p.get("date") + " " + p.get("time"));
 
                 GeoLocation loc = new GeoLocation("User", lat, lon, tz);
@@ -115,20 +107,6 @@ public class Main {
                 if (afterSunset) jc.forward(Calendar.DATE, 1);
 
                 TefilaRules rules = new TefilaRules();
-                rules.setTachanunRecitedEndOfTishrei(bool(p, "tachanunRecitedEndOfTishrei"));
-                rules.setTachanunRecitedWeekAfterShavuos(bool(p, "tachanunRecitedWeekAfterShavuos"));
-                rules.setTachanunRecited13SivanOutOfIsrael(bool(p, "tachanunRecited13SivanOutOfIsrael"));
-                rules.setTachanunRecitedPesachSheni(bool(p, "tachanunRecitedPesachSheni"));
-                rules.setTachanunRecited15IyarOutOfIsrael(bool(p, "tachanunRecited15IyarOutOfIsrael"));
-                rules.setTachanunRecitedMinchaErevLagBaomer(bool(p, "tachanunRecitedMinchaErevLagBaomer"));
-                rules.setTachanunRecitedShivasYemeiHamiluim(bool(p, "tachanunRecitedShivasYemeiHamiluim"));
-                rules.setTachanunRecitedWeekOfHod(bool(p, "tachanunRecitedWeekOfHod"));
-                rules.setTachanunRecitedWeekOfPurim(bool(p, "tachanunRecitedWeekOfPurim"));
-                rules.setTachanunRecitedFridays(bool(p, "tachanunRecitedFridays"));
-                rules.setTachanunRecitedSundays(bool(p, "tachanunRecitedSundays"));
-                rules.setMizmorLesodaRecitedErevYomKippurAndPesach(
-                        bool(p, "mizmorLesodaRecitedErevYomKippurAndPesach")
-                );
 
                 Map<String, Object> r = new LinkedHashMap<>();
                 r.put("dayOfWeek", jc.getDayOfWeek());
@@ -139,10 +117,10 @@ public class Main {
                 r.put("isTachanunRecitedMincha", rules.isTachanunRecitedMincha(jc));
                 r.put("isHallelRecited", rules.isHallelRecited(jc));
                 r.put("isYaalehVeyavoRecited", rules.isYaalehVeyavoRecited(jc));
+                r.put("isMizmorLesodaRecited", rules.isMizmorLesodaRecited(jc));
                 r.put("halachicDayAdvancedAfterSunset", afterSunset);
 
                 respond(exchange, r);
-
             } catch (Exception e) {
                 error(exchange, e.getMessage());
             }
@@ -156,25 +134,14 @@ public class Main {
                 throw new RuntimeException(k + " parameter is required");
     }
 
-    static boolean bool(Map<String, String> p, String k) {
-        return Boolean.parseBoolean(p.get(k));
-    }
-
     static void respond(HttpExchange ex, Map<String, Object> map) throws Exception {
         StringBuilder json = new StringBuilder("{");
         int i = 0;
         for (var e : map.entrySet()) {
             json.append("\"").append(e.getKey()).append("\":");
             Object v = e.getValue();
-
-            if (v instanceof Number || v instanceof Boolean) {
-                json.append(v);
-            } else if (v == null) {
-                json.append("null");
-            } else {
-                json.append("\"").append(v.toString().replace("\"", "\\\"")).append("\"");
-            }
-
+            if (v instanceof Number || v instanceof Boolean) json.append(v);
+            else json.append("\"").append(v).append("\"");
             if (++i < map.size()) json.append(",");
         }
         json.append("}");
@@ -191,9 +158,8 @@ public class Main {
         try {
             byte[] b = ("{\"error\":\"" + msg + "\"}").getBytes();
             ex.sendResponseHeaders(400, b.length);
-            try (OutputStream os = ex.getResponseBody()) {
-                os.write(b);
-            }
+            ex.getResponseBody().write(b);
+            ex.getResponseBody().close();
         } catch (Exception ignored) {}
     }
 
