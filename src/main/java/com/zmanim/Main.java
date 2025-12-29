@@ -117,7 +117,6 @@ public class Main {
                 r.put("isTachanunRecitedMincha", rules.isTachanunRecitedMincha(jc));
                 r.put("isHallelRecited", rules.isHallelRecited(jc));
                 r.put("isYaalehVeyavoRecited", rules.isYaalehVeyavoRecited(jc));
-                r.put("isMizmorLesodaRecited", rules.isMizmorLesodaRecited(jc));
                 r.put("halachicDayAdvancedAfterSunset", afterSunset);
 
                 respond(exchange, r);
@@ -173,3 +172,4 @@ public class Main {
         return m;
     }
 }
+
